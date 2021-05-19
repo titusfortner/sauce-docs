@@ -2,40 +2,63 @@
 id: debug
 title: Using Extended Debugging
 sidebar_label: Debugging
-description: Collect extended debugging data to help audit flaky test results.
+description: Extended debugging functionality toggles a number of additional functionality in WebDriver tests
 ---
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Enable Extended Debugging in your Selenium test script to collect console logs and HTTP Archive (HAR) files generated during testing for use in diagnosing flaky tests or performance degradation.
+Enable Extended Debugging when you create your session to allow for additional functionality with Chrome and Firefox.
 
 :::note
-Extended Debugging generates additional assets that impact test performance and is not intended for everyday testing.
+Extended Debugging generates additional assets (Console Logs and HAR files) that impact test performance,
+so you may not want to use it as a default unless you need specific functionality.
 :::
-
-## What You'll Need
-
-* Google Chrome (no older than 3 versions from latest) as the test browser
-or
-* Firefox browser (versions 53 and above)
 
 :::note
 Extended Debugging is not supported with Headless.
 :::
 
-## Enabling Extended Debugging
+## Enable Extended Debugging
 
-To generate the JS console logs and HAR files, add the `extendedDebugging` capability to the desired capabilities of your test and set it to true. Here are some example scripts in both W3C WebDriver Protocol and legacy JSON Wire Protocol that show Extended Debugging enabled.
+To turn on Extended Debugging, set the `extendedDebugging` capability to `true` when creating your session.
+When a test with extended debugging enabled completes,
+you can access the logs and files through the Sauce Labs UI or with the REST API.
+
+### Using Chrome
+
+Extended Debugging is supported in the 3 most recent versions of Chrome.
+Chrome supports all the features described on this page.
+
+Here is code for using Extended Debugging in Chrome:
+
+:::note
+Check out [Test Configurations](https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options) for a complete list of valid Capabilities
+:::
 
 <Tabs
-  defaultValue="w3c"
+  defaultValue="java"
   values={[
-    {label: 'W3C', value: 'w3c'},
-    {label: 'JSONWP', value: 'jsonwp'},
-  ]}>
+    {label: 'Java', value: 'java'},
+    {label: 'Node', value: 'node'},
+    {label: 'Python', value: 'python'},
+    {label: 'Ruby', value: 'ruby'},
+    {label: 'C#', value: 'c-sharp'},
+ ]}>
 
-<TabItem value="w3c">
+<TabItem value="java">
+
+```
+MutableCapabilities sauceOptions = new MutableCapabilities();
+sauceOptions.setCapabilitiy("extendedDebugging", true);
+
+ChromeOptions options = new ChromeOptions();
+options.setBrowserVersion("latest-1");
+options.setPlatformName("Windows 10");
+options.setCapability("sauce:options", sauceOptions);
+```
+</TabItem>
+<TabItem value="node">
 
 ```
 const capabilities: {
@@ -47,31 +70,107 @@ const capabilities: {
   }
 }
 ```
+
 </TabItem>
-<TabItem value="jsonwp">
+<TabItem value="python">
 
 ```
-const capabilities = {
-  browserName: 'chrome',
-  version: 'latest',
-  platform: 'Windows 10',
-  extendedDebugging: true,
+capabilities = {
+  'browserName': 'chrome',
+  'browserVersion': 'latest-1',
+  'platformName': 'Windows 10',
+  'sauce:options': {
+    'extendedDebugging': true
+  }
 }
 ```
+
+</TabItem>
+<TabItem value="ruby">
+
+```
+capabilities = {
+  browser_name: 'chrome',
+  browser_version: 'latest-1',
+  platform_name: 'Windows 10',
+  'sauce:options': {
+    extended_debugging: true
+  }
+}
+```
+
+</TabItem>
+<TabItem value="c-sharp">
+
+```
+var sauceOptions = new Dictionary<string, object>();
+sauceOptions.Add("extendedDebugging", true);
+
+var options = new ChromeOptions
+{
+    BrowserVersion = "latest-1",
+    PlatformName = "Windows 10"
+};
+
+options.AddAdditionalCapability("sauce:options", sauceOptions);
+```
+
 </TabItem>
 </Tabs>
 
-For more information and additional examples, see our [Extended Debugging Example GitHub repo](https://github.com/saucelabs-training/demo-js/tree/master/webdriverio/webdriver/examples/extended-debugging).
+### Using Firefox
 
-When a test with extended debugging enabled completes, you can access the logs and files through the Sauce Labs application or with the REST API.
+Extended Debugging is supported in Firefox versions 53 and above
+Firefox only supports working with [HAR Files](#har-files) and [Console Logs](#javascript-js-console-logs).
 
-### Edit Your Firefox Profile
+You can use Extended Debugging just like you do in [Chrome](#using-chrome) 
+(just replace `"chrome"` with `"firefox"` in those examples).
+If you are using a custom profile, though, you need to add a few extra settings.
 
-If you're testing on a Firefox browser, edit the Firefox `about:config` file to configure your profile as follows to allow Extended Debugging:
+:::note
+These preferences and arguments adjust the information you can see in the `about:config` page in Firefox.
+:::
+
+<Tabs
+defaultValue="java"
+values={[
+{label: 'Java', value: 'java'},
+{label: 'Node', value: 'node'},
+{label: 'Python', value: 'python'},
+{label: 'Ruby', value: 'ruby'},
+{label: 'C#', value: 'c-sharp'},
+]}>
+
+<TabItem value="java">
 
 ```
-about:config Settings
-'mozz:firefoxOptions': {
+MutableCapabilities sauceOpts = new MutableCapabilities();
+sauceOpts.setCapability("extendedDebugging", true);
+
+FirefoxOptions options = new FirefoxOptions();
+options.setCapability("browserVersion", "87");
+options.setCapability("platformName", "windows 10");
+options.setCapability("sauce:options", sauceOpts);
+
+FirefoxProfile profile = new FirefoxProfile();
+options.setProfile(profile);
+options.addPreference("devtools.debugger.remote-enabled", true);
+options.addPreference("devtools.debugger.prompt-connection", false);
+options.addPreference("devtools.chrome.enabled", true);
+options.addArguments("-start-debugger-server=9222");
+```
+</TabItem>
+<TabItem value="node">
+
+```
+const capabilities: {
+  browserName: 'firefox',
+  browserVersion: 'latest',
+  platformName: 'Windows 10',
+  'sauce:options': {
+        extendedDebugging: true,
+  },
+  'moz:firefoxOptions': {
     'profile': '<CUSTOM_PROFILE_ID>',
     'args': [
         '-start-debugger-server',
@@ -82,25 +181,90 @@ about:config Settings
         'devtools.debugger.prompt-connection': false,
         'devtools.chrome.enabled': true
     }
-},
+  }
+}
 ```
 
-## Using the JavaScript Executor to Simulate Network Conditions
+</TabItem>
+<TabItem value="python">
 
-Selenium's [JavascriptExecutor](https://seleniumhq.github.io/selenium/docs/api/java/org/openqa/selenium/JavascriptExecutor.html) lets you use JavaScript commands in your test scripts to perform actions in the browser, and Sauce Labs exposes a set of custom JavascriptExecutor methods for use with your tests. The commands defined on this page allow you to simulate various test environments for more effective debugging.
+```
+sauceOptions = {"extendedDebugging": True}
 
-### Intercept Network Requests
+options = webdriver.FirefoxOptions()
+options.set_capability('platformName', 'Windows 10')
+options.set_capability('browserVersion', '87')
+options.profile = webdriver.FirefoxProfile()
+options.set_preference('devtools.debugger.remote-enabled', True)
+options.set_preference('devtools.debugger.prompt-connection', False)
+options.set_preference('devtools.chrome.enabled', True)
+options.add_argument('-start-debugger-server=9222')
 
-Use the `sauce:intercept` JavascriptExecutor command to modify browser requests to:
+options.set_capability("sauce:options", sauceOptions)
+```
 
-* Prohibit requests to 3rd party vendors
-* Modify requests to REST API (Mock REST API response)
-* Redirect certain parts of the app
-* Insert or change headers
+</TabItem>
+<TabItem value="ruby">
 
-The following use cases are supported for the `sauce:intercept` command.
+```
+sauce_opts = {'sauce:options': {extendedDebugging: true}}
+caps = Selenium::WebDriver::Remote::Capabilities.firefox(sauce_opts)
 
-#### `sauce:intercept` + redirect
+profile = Selenium::WebDriver::Firefox::Profile.new
+opts = {platform_name: 'Windows 10',
+       browser_version: '88',
+       args: ['-start-debugger-server', '9222'],
+       prefs: {'devtools.debugger.remote-enabled' => true,
+               'devtools.debugger.prompt-connection' => false,
+               'devtools.chrome.enabled' => true},
+       profile: profile}
+firefox_options = Selenium::WebDriver::Firefox::Options.new(opts)
+
+capabilities = [caps, firefox_options]
+```
+
+</TabItem>
+<TabItem value="c-sharp">
+
+```
+var sauceOptions = new Dictionary<string, object>();
+sauceOptions.Add("extendedDebugging", true);
+
+var options = new FirefoxOptions
+{
+    BrowserVersion = "latest-1",
+    PlatformName = "Windows 10"
+};
+
+options.AddAdditionalCapability("sauce:options", sauceOptions);
+```
+
+</TabItem>
+</Tabs>
+
+## Use Custom Execute Script Commands
+Selenium's [Execute Script](https://www.selenium.dev/documentation/en/webdriver/browser_manipulation/#execute-script) 
+feature lets you execute JavaScript commands from your test code to perform actions in the browser. 
+Sauce Labs provides custom commands to work with Extended Debugging features via JavaScript execution.
+
+:::note
+For working examples of these features, see our
+[Extended Debugging Example Code](https://github.com/saucelabs-training/demo-js/tree/master/webdriverio/webdriver/examples/extended-debugging).
+:::
+
+Things you can do with the custom scripts:
+* Redirect requests (e.g. load a separate page or portion of page)
+* Block responses (e.g. prevent loading 3rd party vendor code)
+* Replace responses (e.g. Mock responses)
+* Insert or change response headers
+* Return error from request
+* Simulate running your app on a slower system
+* Simulate different connectivity conditions that may affect the performance of your app
+* Access network logs during test (e.g. you can make an assertion that a specific asset has loaded)
+
+Here are explanations for each of these:
+
+### `sauce:intercept` + redirect
 
 Configure `sauce:intercept` to redirect an outgoing request to an alternate URL.
 
@@ -152,7 +316,7 @@ browser.interceptRequest({
 </TabItem>
 </Tabs>
 
-#### `sauce:intercept` + response
+### `sauce:intercept` + response
 
 Configure `sauce:intercept` to return the specified response.
 
@@ -229,7 +393,7 @@ browser.interceptRequest({
 </TabItem>
 </Tabs>
 
-#### `sauce:intercept` + error
+### `sauce:intercept` + error
 
 Configure `sauce:intercept` to return the specified error.
 
@@ -293,14 +457,10 @@ browser.interceptRequest({
 </TabItem>
 </Tabs>
 
+### `sauce:throttleCPU`
 
-### Throttle Conditions
-
-Use the JavascriptExecutor throttle commands to simulate different connectivity conditions that may affect the performance of your app.
-
-#### `sauce:throttleCPU`
-
-Mobile devices have less CPU power than most desktops and laptops (or a VM's default configuration). Use CPU Throttling to simulate how your app will run on slower systems.
+Mobile devices have less CPU power than most desktops and laptops (or a VM's default configuration). 
+Use CPU Throttling to simulate how your app will run on slower systems.
 
 **Command Parameters**
 
@@ -340,7 +500,7 @@ browser.throttleCPU(4)
 </TabItem>
 </Tabs>
 
-#### `sauce:throttleNetwork`
+### `sauce:throttleNetwork`
 
 With network conditioning you can test your site on a variety of network connections, including Edge, 3G, and even offline. You can throttle the data throughput, including the maximum download and upload throughput, and use latency manipulation to enforce a minimum delay in connection round-trip time (RTT).
 
@@ -471,10 +631,46 @@ browser.throttleNetwork({
 </TabItem>
 </Tabs>
 
+### `sauce:log` + `sauce:network`
+
+Extended Debugging allows Sauce to record all network requests made by the open page in the browser during the test. 
+
+**Command Parameters**
+
+<table id="table-fw">
+  <tbody>
+    <tr>
+    <td><code>type</code></td>
+    <td><p><small>| REQUIRED | STRING |</small></p><p>The type of log to collect. Currently only "sauce:network" is supported.</p></td>
+    </tr>
+  </tbody>
+</table>
+
+**Examples**
+
+<Tabs
+groupId="lang"
+defaultValue="wdio"
+values={[
+{"label":"WebdriverIO","value":"wdio"}
+]}>
+<TabItem value="wdio">
+
+```js
+driver.execute('sauce:log', { type: 'sauce:network' })
+```
+
+</TabItem>
+</Tabs>
 
 ## JavaScript (JS) Console Logs
 
-The JS console collects security errors, warnings, and messages that are explicitly logged by the browser. You can use these logs to find out which components of your web application failed to load or ran into an error, what warnings were logged by the browser, and get more information about application performance. The console log information is associated with the URL where it occurred, and is composed of four types of information: **Log**, **Info**, **Warning**, and **Error**. In this example, you can see how an error was generated for the URL  `https://pbs.twimg.com/profile_images/477099293250052097/fMFjb8gu_400x400.jpeg` when a resource failed to load:
+The JS console collects security errors, warnings, and messages that are explicitly logged by the browser. 
+You can use these logs to find out which components of your web application failed to load or ran into an error, 
+what warnings were logged by the browser, and get more information about application performance. 
+The console log information is associated with the URL where it occurred, and is composed of four types of information: 
+**Log**, **Info**, **Warning**, and **Error**. In this example, you can see how an error was generated for the URL 
+`https://pbs.twimg.com/profile_images/477099293250052097/fMFjb8gu_400x400.jpeg` when a resource failed to load:
 
 ```
 {
@@ -531,12 +727,4 @@ You can also download a HAR file programmatically using the following API reques
 
 ```
 curl --compressed -O https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@{DATA_CENTER}.saucelabs.com/v1/eds/JOB_ID/network.har
-```
-
-## Network Logs
-
-Sauce Labs records all network requests made by the open page in the browser during the test. To generate the network logs in your test output, include the following JavaScript Executor command in your test script:
-
-```js
-driver.execute('sauce:log', { type: 'sauce:network' }):
 ```
